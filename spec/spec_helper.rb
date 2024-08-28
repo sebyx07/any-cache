@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require 'any_cache'
+require 'any-cache'
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
