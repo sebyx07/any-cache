@@ -1,18 +1,16 @@
 # frozen_string_literal: true
 
-require 'concurrent/map'
-require 'zlib'
-
 module AnyCache
   class BaseCache
     def self.load_from(file_path:, compressed: true)
-      instance = new
-      if compressed
-        cache = Marshal.load(Zlib::Inflate.inflate(File.read(file_path)))
-      else
-        cache = Marshal.load(File.read(file_path))
+      new.tap do |instance|
+        if compressed
+          cache = Marshal.load(Zlib::Inflate.inflate(File.read(file_path)))
+        else
+          cache = Marshal.load(File.read(file_path))
+        end
+        instance.instance_variable_set(:@cache, cache)
       end
-      instance.instance_variable_set(:@cache, cache)
     end
 
     def initialize(size: 1024, thread_safe: true)
@@ -37,7 +35,7 @@ module AnyCache
     end
 
     def add(key, value, ttl: nil)
-      @cache[key] = CacheItems::Simple.new(value, ttl)
+      @cache[key] = CacheItems::Simple.new(value, ttl ? Time.now + ttl : nil)
       evict_old_keys
     end
 
@@ -56,13 +54,16 @@ module AnyCache
       value
     end
 
+    def fetch_values(*keys, &block)
+      keys.map { |key| fetch(key, &block) }
+    end
+
     def delete(key)
       @cache.delete(key)
     end
 
     def save_to(file_path:, compressed: true)
       if compressed
-        file_path = "#{file_path}.gz"
         File.write(file_path, Zlib::Deflate.deflate(Marshal.dump(@cache)))
       else
         File.write(file_path, Marshal.dump(@cache))

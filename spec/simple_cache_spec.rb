@@ -51,9 +51,9 @@ RSpec.describe AnyCache::SimpleCache do
     end
 
     it 'adds a new key-value pair with TTL' do
-      cache.add('key', 'value', ttl: 1)
+      cache.add('key', 'value', ttl: 0.2)
       expect(cache['key']).to eq('value')
-      sleep(1.1)
+      sleep(0.3)
       expect(cache['key']).to be_nil
     end
   end
@@ -78,6 +78,21 @@ RSpec.describe AnyCache::SimpleCache do
     end
   end
 
+  describe '#fetch_values' do
+    it 'returns existing values if keys exist' do
+      cache.add('key1', 'value1')
+      cache.add('key2', 'value2')
+      expect(cache.fetch_values('key1', 'key2')).to eq(%w[value1 value2])
+    end
+
+    it 'calls the block and returns its value if key does not exist' do
+      values = cache.fetch_values('key1', 'key2') { 'value' }
+      expect(values).to eq(%w[value value])
+      expect(cache['key1']).to eq('value')
+      expect(cache['key2']).to eq('value')
+    end
+  end
+
   describe '#delete' do
     it 'removes the key-value pair' do
       cache.add('key', 'value')
@@ -91,14 +106,13 @@ RSpec.describe AnyCache::SimpleCache do
 
     after do
       File.delete(file_path) if File.exist?(file_path)
-      File.delete("#{file_path}.gz") if File.exist?("#{file_path}.gz")
     end
 
     it 'saves and loads the cache' do
       cache.add('key', 'value')
-      cache.save_to(file_path: file_path)
+      cache.save_to(file_path: file_path, compressed: false)
 
-      loaded_cache = described_class.load_from(file_path: file_path)
+      loaded_cache = described_class.load_from(file_path: file_path, compressed: false)
       expect(loaded_cache['key']).to eq('value')
     end
 
@@ -106,7 +120,7 @@ RSpec.describe AnyCache::SimpleCache do
       cache.add('key', 'value')
       cache.save_to(file_path: file_path, compressed: true)
 
-      loaded_cache = described_class.load_from(file_path: "#{file_path}.gz", compressed: true)
+      loaded_cache = described_class.load_from(file_path: file_path, compressed: true)
       expect(loaded_cache['key']).to eq('value')
     end
   end
