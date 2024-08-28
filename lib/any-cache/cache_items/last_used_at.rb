@@ -2,7 +2,7 @@
 
 module AnyCache
   module CacheItems
-    Used = Struct.new(:value, :expires_at, :last_used_at) do
+    LastUsedAt = Struct.new(:value, :expires_at, :last_used_at) do
       def expired?
         return false unless expires_at
         expires_at < Time.now

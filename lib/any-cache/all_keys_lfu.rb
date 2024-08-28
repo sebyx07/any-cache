@@ -1,11 +1,10 @@
 # frozen_string_literal: true
 
 module AnyCache
-  class AllKeysLru < BaseCache
+  class AllKeysLfu < BaseCache
     def initialize(size: 1024, thread_safe: true)
       @size = size
       @cache = {}
-      @lru_list = []
       @mutex = thread_safe ? Mutex.new : nil
     end
 
@@ -18,7 +17,7 @@ module AnyCache
           delete(key)
           nil
         else
-          update_lru(key)
+          increment_frequency(key)
           cache_item.value
         end
       end
@@ -27,13 +26,13 @@ module AnyCache
     def []=(key, value)
       synchronize do
         if @cache.key?(key)
-          update_lru(key)
+          increment_frequency(key)
+          @cache[key].value = value
         elsif @cache.size >= @size
-          evict_lru
+          evict_lfu
         end
 
-        @cache[key] = CacheItems::LastUsedAt.new(value, nil, Time.now)
-        @lru_list.push(key)
+        @cache[key] ||= CacheItems::MostUsed.new(value, nil, 0)
         value
       end
     end
@@ -41,13 +40,14 @@ module AnyCache
     def add(key, value, ttl: nil)
       synchronize do
         if @cache.key?(key)
-          update_lru(key)
+          increment_frequency(key)
+          @cache[key].value = value
+          @cache[key].expires_at = ttl ? Time.now + ttl : nil
         elsif @cache.size >= @size
-          evict_lru
+          evict_lfu
         end
 
-        @cache[key] = CacheItems::LastUsedAt.new(value, ttl ? Time.now + ttl : nil, Time.now)
-        @lru_list.push(key)
+        @cache[key] ||= CacheItems::MostUsed.new(value, ttl ? Time.now + ttl : nil, 0)
         value
       end
     end
@@ -55,20 +55,19 @@ module AnyCache
     def delete(key)
       synchronize do
         @cache.delete(key)
-        @lru_list.delete(key)
       end
     end
 
     private
-      def update_lru(key)
-        @lru_list.delete(key)
-        @lru_list.push(key)
-        @cache[key].last_used_at = Time.now
+      def increment_frequency(key)
+        @cache[key].count += 1
       end
 
-      def evict_lru
-        lru_key = @lru_list.shift
-        @cache.delete(lru_key)
+      def evict_lfu
+        min_frequency = @cache.values.map(&:count).min
+        lfu_keys = @cache.select { |_, v| v.count == min_frequency }.keys
+        lfu_key = lfu_keys.first
+        delete(lfu_key)
       end
 
       def synchronize(&block)
