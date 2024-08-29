@@ -1,12 +1,16 @@
 # frozen_string_literal: true
 
 module AnyCache
-  class AllKeysLru < BaseCache
+  class LRUCache < BaseCache
     def initialize(size: 1024, thread_safe: true)
       @size = size
       @cache = {}
       @lru_list = []
       @mutex = thread_safe ? Mutex.new : nil
+    end
+
+    def exists?(key)
+      synchronize { @cache.key?(key) }
     end
 
     def [](key)
@@ -57,6 +61,14 @@ module AnyCache
         @cache.delete(key)
         @lru_list.delete(key)
       end
+    end
+
+    def keys
+      synchronize { @cache.keys }
+    end
+
+    def clear
+      synchronize { @cache.clear }
     end
 
     private

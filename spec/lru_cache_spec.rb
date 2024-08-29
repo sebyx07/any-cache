@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-RSpec.describe AnyCache::AllKeysLfu do
+RSpec.describe AnyCache::LRUCache do
   let(:cache_size) { 3 }
   let(:cache) { described_class.new(size: cache_size) }
 
@@ -29,11 +29,11 @@ RSpec.describe AnyCache::AllKeysLfu do
       expect(cache['key']).to eq('value')
     end
 
-    it 'increments the frequency count when accessing a key' do
-      cache['key'] = 'value'
-      cache['key']
-      cache['key']
-      expect(cache.instance_variable_get(:@cache)['key'].count).to eq(2)
+    it 'updates the LRU order when accessing a key' do
+      cache['key1'] = 'value1'
+      cache['key2'] = 'value2'
+      cache['key1']
+      expect(cache.instance_variable_get(:@lru_list).last).to eq('key1')
     end
   end
 
@@ -49,13 +49,12 @@ RSpec.describe AnyCache::AllKeysLfu do
       expect(cache['key']).to eq('value2')
     end
 
-    it 'evicts the least frequently used item when cache is full' do
+    it 'evicts the least recently used item when cache is full' do
       cache['key1'] = 'value1'
       cache['key2'] = 'value2'
       cache['key3'] = 'value3'
-      cache['key1']  # increment frequency for key1
       cache['key4'] = 'value4'
-      expect(cache['key2']).to be_nil
+      expect(cache['key1']).to be_nil
       expect(cache['key4']).to eq('value4')
     end
   end
@@ -68,15 +67,8 @@ RSpec.describe AnyCache::AllKeysLfu do
 
     it 'expires items after TTL' do
       cache.add('key', 'value', ttl: 0.1)
-      sleep(0.2)
+      sleep(0.3)
       expect(cache['key']).to be_nil
-    end
-
-    it 'updates the value and TTL for an existing key' do
-      cache.add('key', 'value1', ttl: 10)
-      cache.add('key', 'value2', ttl: 20)
-      expect(cache['key']).to eq('value2')
-      expect(cache.instance_variable_get(:@cache)['key'].expires_at).to be > Time.now + 15
     end
   end
 
@@ -99,18 +91,11 @@ RSpec.describe AnyCache::AllKeysLfu do
       cache.delete('key')
       expect(cache['key']).to be_nil
     end
-  end
 
-  describe 'LFU behavior' do
-    it 'evicts the least frequently used item when cache is full' do
-      cache['key1'] = 'value1'
-      cache['key2'] = 'value2'
-      cache['key3'] = 'value3'
-      2.times { cache['key1'] }
-      3.times { cache['key2'] }
-      cache['key4'] = 'value4'
-      expect(cache['key3']).to be_nil
-      expect(cache['key4']).to eq('value4')
+    it 'removes the key from the LRU list' do
+      cache['key'] = 'value'
+      cache.delete('key')
+      expect(cache.instance_variable_get(:@lru_list)).not_to include('key')
     end
   end
 

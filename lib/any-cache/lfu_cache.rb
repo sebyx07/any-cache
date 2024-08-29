@@ -1,11 +1,15 @@
 # frozen_string_literal: true
 
 module AnyCache
-  class AllKeysLfu < BaseCache
+  class LFUCache < BaseCache
     def initialize(size: 1024, thread_safe: true)
       @size = size
       @cache = {}
       @mutex = thread_safe ? Mutex.new : nil
+    end
+
+    def exists?(key)
+      synchronize { @cache.key?(key) }
     end
 
     def [](key)
@@ -56,6 +60,14 @@ module AnyCache
       synchronize do
         @cache.delete(key)
       end
+    end
+
+    def keys
+      synchronize { @cache.keys }
+    end
+
+    def clear
+      synchronize { @cache.clear }
     end
 
     private

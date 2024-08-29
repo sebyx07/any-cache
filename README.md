@@ -1,35 +1,147 @@
-# AnyCache
+# AnyCache 🚀
 
-TODO: Delete this and the text below, and describe your gem
+__THIS IS NOT A DATABASE!__
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/any_cache`. To experiment with that code, run `bin/console` for an interactive prompt.
+AnyCache is a versatile in-memory caching library for Ruby, supporting various cache eviction strategies. It's designed for applications needing efficient, customizable caching mechanisms.
 
-## Installation
+## Features 🌟
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+- Multiple cache types: Simple, LRU (Least Recently Used), LFU (Least Frequently Used)
+- Thread-safe operations (optional)
+- Compression support
+- Persist caches to disk and reload them
+- Easy to use API
 
-Install the gem and add to the application's Gemfile by executing:
+## Installation 💎
 
-    $ bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+Add this line to your application's Gemfile:
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+```ruby
+gem 'any-cache'
+```
 
-    $ gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+And then execute:
 
-## Usage
+```
+$ bundle install
+```
 
-TODO: Write usage instructions here
+Or install it yourself as:
 
-## Development
+```
+$ gem install any-cache
+```
+
+## Usage 🔧
+
+### Basic Usage
+
+```ruby
+require 'any-cache'
+
+# Create a new LRU cache
+# 1024 is the default
+# Thread safety is enabled by default, but disabling can improve throughput
+cache = AnyCache.new(:lru, size: 1024, thread_safe: false)
+
+# Add items to the cache
+cache.add('key1', 'value1')
+cache['key2'] = 'value2'
+cache.add('key3', 'value3', ttl: 30)  # Expires after 30 seconds
+
+# Retrieve items
+puts cache['key1']  # Output: value1
+puts cache.fetch('key3')  # Output: value3
+
+puts cache.fetch('key4') { 'default_value' }  # Output: default_value
+puts cache.fetch_values('key1', 'key5')  { 'default_value' } # Output: ['value1', 'default_value']
+
+# Delete items
+cache.delete('key2')
+
+sleep 60
+puts cache['key3']  # Output: nil
+```
+
+### Cache Types
+
+AnyCache supports three types of caches:
+
+- `:simple` - Simple cache eviction FIFO (First In First Out) strategy
+- `:lru` - Least Recently Used eviction strategy
+- `:lfu` - Least Frequently Used eviction strategy
+
+```ruby
+simple_cache = AnyCache.new(:simple)
+lru_cache = AnyCache.new(:lru)
+lfu_cache = AnyCache.new(:lfu)
+```
+
+### Thread Safety ⚠️
+
+When using the cache as a class attribute, it's recommended to use thread-safe mode:
+
+```ruby
+class MyClass
+  class << self
+    def cache
+      @cache ||= AnyCache.new(:lru, thread_safe: true)
+    end
+  end
+end
+```
+
+For local variables or when thread safety is not a concern, you can disable it for better performance:
+
+```ruby
+local_cache = AnyCache.new(:lru, thread_safe: false)
+```
+
+### Compression and Persistence 💾
+
+AnyCache supports compressing cached data and persisting it to disk:
+
+```ruby
+# Create a compressed cache
+compressed_cache = AnyCache.new(:lru, compressed: true)
+
+# Save cache to disk
+compressed_cache.save_to(file_path: 'my_cache.dump')
+
+# Load cache from disk
+loaded_cache = AnyCache.new(:lru, file_path: 'my_cache.dump')
+```
+
+### Advanced Usage
+
+```ruby
+cache = AnyCache.new(:lru, size: 100)
+
+# Add an item with a TTL (Time To Live)
+cache.add('key', 'value', ttl: 60)  # Expires after 60 seconds
+
+# Fetch or compute a value
+value = cache.fetch('key') { 'computed_value' }
+
+# Get all keys
+keys = cache.keys
+
+# Clear the cache
+cache.clear
+```
+
+## Development 🛠️
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+## Contributing 🤝
 
-## Contributing
+Bug reports and pull requests are welcome on GitHub at https://github.com/sebyx07/any_cache. This project is intended to be a safe, welcoming space for collaboration, and contributors are expected to adhere to the [code of conduct](CODE_OF_CONDUCT.md).
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/any_cache.
-
-## License
+## License 📄
 
 The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+
+## Code of Conduct 🤓
+
+Everyone interacting in the AnyCache project's codebases, issue trackers, chat rooms and mailing lists is expected to follow the [code of conduct](CODE_OF_CONDUCT.md).

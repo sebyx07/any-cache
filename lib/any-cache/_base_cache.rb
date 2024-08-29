@@ -74,6 +74,14 @@ module AnyCache
       "#<#{self.class.name}:0x#{object_id.to_s(16)} #{@cache.size}/#{@size} keys>"
     end
 
+    def keys
+      @cache.keys
+    end
+
+    def clear
+      @cache.clear
+    end
+
     private
       def evict_old_keys
         @cache.delete(@cache.keys.first) if @cache.size > @size && @size&.positive?
