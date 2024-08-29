@@ -109,11 +109,9 @@ PLATFORMS
 
 DEPENDENCIES
   any-cache!
-  bundler (~> 2.0)
   pry (~> 0.14.2)
   rake (~> 13.0)
   rspec (~> 3.0)
-  rubocop (~> 1.21)
   rubocop-rails_config (~> 1.16)
 
 BUNDLED WITH
